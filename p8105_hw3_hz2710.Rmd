@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(p8105.datasets)
 library(tidyverse)
 library(ggplot2)
+library(dplyr)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -39,13 +40,16 @@ instacart = instacart
 
 The goal is to do some exploration of this dataset. 
 
-The dataset has `r nrow(instacart)` rows and `r ncol(instacart)` columns, including of `r colnames(instacart)` variables. For example, we can see the first row shows that an item shopped in an order with id is 1, id of the product is 49302, the first item added in the cart was reordered the first time by a user with id 112108. It was the 4th time for this user. He bought the product at the 10th hour of the day on the 4th day of the week. Since the last order, it had been 9 days. The product name is 'Bulgarian Yogurt'. The aisle id and name is 120 and 'yogurt'. The department id and name is 16 and 'dairy eggs'.
+* The dataset has `r nrow(instacart)` rows and `r ncol(instacart)` columns, including of `r colnames(instacart)` variables. 
+* For example, we can see the first row shows that an item shopped in an order with id is 1, id of the product is 49302, the first item added in the cart was reordered the first time by a user with id 112108. It was the 4th time for this user. He bought the product at the 10th hour of the day on Thursday. Since the last order, it had been 9 days. The product name is 'Bulgarian Yogurt'. The aisle id and name is 120 and 'yogurt'. The department id and name is 16 and 'dairy eggs'.
+`r instacart[1,] %>% knitr::kable()`
 
-There are `r length(unique(pull(instacart, aisle)))` aisles here, and the most items ordered from `r names(tail(sort(table(pull(instacart, aisle))),1))`. Fresh vegetables are common and necessary supplies.
+* There are `r length(unique(pull(instacart, aisle)))` aisles here, and the most items ordered from `r names(tail(sort(table(pull(instacart, aisle))),1))`. Fresh vegetables are common and necessary supplies.
 
-Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. 
+* A plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. 
 ```{r}
-instacart %>%
+plot1 =
+  instacart %>%
   group_by(aisle) %>%
   mutate(
     aisle_count = length(aisle)
@@ -53,11 +57,43 @@ instacart %>%
   filter(aisle_count > 10000) %>%
   ggplot(aes(x = aisle)) +
     geom_bar() + 
-    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     labs(x = "aisle", y = "aisle count", title = "Counts of aisle") 
+
+plot1
 ```
 
-Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+* A table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
+```{r}
+pop_items = 
+  instacart %>%
+  filter(
+    aisle %in% c("baking ingredients","dog food care","packaged vegetables fruits")
+  ) %>%
+  group_by(aisle) %>%
+  count(product_name,name = "product_count") %>%
+  top_n(3) %>%
+  knitr::kable()
+
+
+
+instacart %>%
+  filter(
+    aisle %in% c("baking ingredients","dog food care","packaged vegetables fruits")
+  ) %>%
+  group_by(aisle,product_name) %>%
+  summarize(product_count = length(product_name)) %>%
+  mutate(
+    product_count = order(product_count, decreasing = TRUE),
+    product_rank_within_aisle = rank(product_count)
+  ) %>%
+  filter(product_rank_within_aisle <= 3) %>%
+  select(-product_rank_within_aisle) %>%
+  knitr::kable()
+
+  
+```
+
 
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
 
