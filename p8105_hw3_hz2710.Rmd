@@ -11,6 +11,7 @@ library(p8105.datasets)
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
+library(knitr)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -101,13 +102,13 @@ mean_hour =
   summarize(mean_order_hour = mean(order_hour_of_day)) %>%
   mutate(
     order_dow = case_when(
-      order_dow == 0 ~ "Monday",
-      order_dow == 1 ~ "Tuesday",
-      order_dow == 2 ~ "Wednesday",
-      order_dow == 3 ~ "Thursday",
-      order_dow == 4 ~ "Friday",
-      order_dow == 5 ~ "Saturday",
-      order_dow == 6 ~ "Sunday",
+      order_dow == 1 ~ "Monday",
+      order_dow == 2 ~ "Tuesday",
+      order_dow == 3 ~ "Wednesday",
+      order_dow == 4 ~ "Thursday",
+      order_dow == 5 ~ "Friday",
+      order_dow == 6 ~ "Saturday",
+      order_dow == 0 ~ "Sunday",
     )
   ) %>%
   pivot_wider(names_from = order_dow,
@@ -132,9 +133,9 @@ brfss =
     state = locationabbr,
     location = locationdesc
   ) %>%
-  filter(topic == "Overall Health" & response %in% c("Excellent","Very good","Good","Fair","Poor")) %>%
+  filter(topic == "Overall Health" & response %in% c("Poor", "Fair", "Good", "Very good", "Excellent")) %>%
   mutate(
-    response = factor(response, levels = c("Excellent","Very good","Good","Fair","Poor"))
+    response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))
   )
 ```
 
@@ -197,3 +198,88 @@ brfss %>%
 ```
 
 * In NY, the distribution of data value in 2006 is similar as in 2010. The range of the group "Excellent", "Poor" and "Good" keeps same. The group "Very good" and the group "Fair" have a larger variation in 2010 compared to 2006. 
+
+## Problem 3
+
+```{r}
+acc = read.csv("./accel_data.csv") %>%
+  janitor::clean_names()
+```
+
+```{r}
+acc_long = 
+  acc %>%
+  mutate(
+    weekend_weekday = ifelse(day %in% c("Saturday","Sunday"), 0, 1),
+    day = factor(day, levels = c("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday")),
+    week = as.integer(week),
+    day_id = as.integer(day_id)
+  ) %>%
+  pivot_longer(activity_1:activity_1440,names_to = "actitity_id", values_to = "counts") %>%
+  relocate("weekend_weekday", .after = day) 
+
+acc_long %>% knitr::kable()
+```
+
+* There are six variables, including of `r colnames(acc)`. We can see the men activity counts for any minute on a observed day with the week id and day id. The number of observation is `r nrow(acc)`.
+
+```{r}
+daily_activity = 
+  acc_long %>%
+  group_by(week,day_id,day) %>%
+  summarise(day_counts = sum(counts)) %>%
+  knitr::kable()
+
+daily_activity
+```
+
+* The men total daily activity counts varied from 100000 to 600000. But on Saturday of week 4 and week 5, the counts declined to 1440, an abnormal level. The men might forget to wear the devices or something wrong for the devices to get the data or the men had situation for his health.
+
+```{r,fig.width = 10}
+acc_hour =
+  acc_long %>%
+  mutate(
+    hour_id = as.integer(round(row_number()/60) )
+  ) %>%
+  group_by(hour_id) %>%
+  summarise(hour_counts = sum(counts))
+
+acc_long %>%
+  mutate(
+    hour_id = as.integer(round(row_number()/60) )
+  ) %>%
+  left_join(acc_hour, by = "hour_id") %>%
+  select(week,day_id,day,hour_id,hour_counts) %>%
+  distinct() %>%
+  ggplot(aes(x = hour_id, y = hour_counts, color = day, fill = day,alpha = 0.5)) +
+  geom_line() +
+  scale_x_continuous(
+    breaks = seq(0, 875, by = 25),
+    labels = seq(0, 35)) 
+```
+
+* 
+acc_hour=
+  acc_long %>%
+  mutate(
+    hour_id = as.integer(round(row_number()/60) )
+  ) %>%
+  group_by(hour_id) %>%
+  summarise(hour_counts = sum(counts))
+acc_long %>%
+  mutate(
+    hour_id = as.integer(round(row_number()/60) )
+  ) %>%
+  left_join(acc_hour, by = "hour_id") %>%
+  select(week,day_id,day,hour_id,hour_counts) %>%
+  distinct() %>%
+  mutate(
+    hour_id = hour_id - 24 * (day_id-1)
+  ) %>%
+  ggplot(aes(x = hour_id, y = hour_counts, color = day, fill = day,alpha = 0.5)) +
+  geom_line() +
+  scale_x_continuous(
+    breaks = seq(0, 50400, by = 1440),
+    labels = seq(0, 35)) +
+  labs(x = "Day of week", y = "Activity counts", title = " 24h activity time for each day")
+```
