@@ -252,34 +252,10 @@ acc_long %>%
   select(week,day_id,day,hour_id,hour_counts) %>%
   distinct() %>%
   ggplot(aes(x = hour_id, y = hour_counts, color = day, fill = day,alpha = 0.5)) +
-  geom_line() +
+  geom_point() +
   scale_x_continuous(
     breaks = seq(0, 875, by = 25),
     labels = seq(0, 35)) 
 ```
 
-* 
-acc_hour=
-  acc_long %>%
-  mutate(
-    hour_id = as.integer(round(row_number()/60) )
-  ) %>%
-  group_by(hour_id) %>%
-  summarise(hour_counts = sum(counts))
-acc_long %>%
-  mutate(
-    hour_id = as.integer(round(row_number()/60) )
-  ) %>%
-  left_join(acc_hour, by = "hour_id") %>%
-  select(week,day_id,day,hour_id,hour_counts) %>%
-  distinct() %>%
-  mutate(
-    hour_id = hour_id - 24 * (day_id-1)
-  ) %>%
-  ggplot(aes(x = hour_id, y = hour_counts, color = day, fill = day,alpha = 0.5)) +
-  geom_line() +
-  scale_x_continuous(
-    breaks = seq(0, 50400, by = 1440),
-    labels = seq(0, 35)) +
-  labs(x = "Day of week", y = "Activity counts", title = " 24h activity time for each day")
-```
+* On day 22 and day 29, the counts was extremely low, an abnormal level. The men might forget to wear the devices or something wrong for the devices to get the data or the men had situation for his health. Most of the day, the trend was like a thin downward parabola, reaching the peak at the middle of the day.
